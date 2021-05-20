@@ -1,5 +1,42 @@
 const Ticket = require('../models/Ticket');
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
+const Aggregation = (idTicket) => {
+  return [
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(idTicket),
+      },
+    },
+    {
+      $unwind: {
+        path: '$ticket_products',
+      },
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'ticket_products',
+        foreignField: '_id',
+        as: 'ticket_products',
+      },
+    },
+    {
+      $unwind: {
+        path: '$ticket_products',
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        amount: {
+          $sum: '$ticket_products.product_price',
+        },
+      },
+    },
+  ];
+};
+
 module.exports = {
   create: async (req, res) => {
     /*
@@ -105,5 +142,26 @@ module.exports = {
 
   calculateTotalTicket: async (req, res) => {
     const { idTicket } = req.params;
+    try {
+      const result = await Ticket.aggregate(Aggregation(idTicket));
+
+      const subtotal = result[0].amount;
+      const Iva = subtotal * 0.18;
+      const total = subtotal + Iva;
+      const updatedTicket = await Ticket.findByIdAndUpdate(
+        idTicket,
+        {
+          ticket_subtotal: subtotal,
+          ticket_IVA: Iva,
+          ticket_total: total,
+        },
+        {
+          new: true,
+        }
+      );
+      res.status(204).json({ message: updatedTicket });
+    } catch (error) {
+      return res.status(500).json({ error });
+    }
   },
 };
