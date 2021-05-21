@@ -1,6 +1,7 @@
 const Ticket = require('../models/Ticket');
 const Product = require('../models/Product');
 const mongoose = require('mongoose');
+const { TicketAggregation } = require('../aggregations');
 const Aggregation = (idTicket) => {
   return [
     {
@@ -143,8 +144,10 @@ module.exports = {
   calculateTotalTicket: async (req, res) => {
     const { idTicket } = req.params;
     try {
-      const result = await Ticket.aggregate(Aggregation(idTicket));
-
+      const result = await Ticket.aggregate(
+        TicketAggregation.sumOfProductByTicket(idTicket)
+      );
+      console.log(result);
       const subtotal = result[0].amount;
       const Iva = subtotal * 0.18;
       const total = subtotal + Iva;
@@ -159,9 +162,10 @@ module.exports = {
           new: true,
         }
       );
-      res.status(204).json({ message: updatedTicket });
+      console.log(updatedTicket);
+      res.status(201).json({ message: updatedTicket });
     } catch (error) {
-      return res.status(500).json({ error });
+      return res.status(500).json({ error: error });
     }
   },
 };

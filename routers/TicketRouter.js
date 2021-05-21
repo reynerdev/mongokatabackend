@@ -32,7 +32,7 @@ router.delete(
   TicketController.deleteProductFromTicket
 );
 
-router.post(
+router.patch(
   '/tickets/:idTicket/calculate',
   TicketController.calculateTotalTicket
 );
